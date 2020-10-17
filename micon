@@ -81,11 +81,10 @@ dump() {
 
     if [ -n "$2" ]; then
         mirror_file=$(find "$local_repo/$1" -iname "$2" | head -n 1)
-        mirror_file_relative=${mirror_file#"$local_repo/$1"}
     else
         mirror_file=$(find "$local_repo" -iname "$1" | head -n 1)
-        mirror_file_relative=${mirror_file#"$local_repo/"}
     fi
+    mirror_file_relative=${mirror_file#"$local_repo/"}
 
     if [ -n "$mirror_file" ]; then
         if [ -d "$mirror_file" ]; then
