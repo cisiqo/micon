@@ -4,5 +4,5 @@
 
 ```
 curl -L https://raw.github.com/cisiqo/micon/master/micon \
-    -so ~/bin/micon && chmod +x ~/bin/micon && micon update
+    -so /usr/bin/micon && chmod +x /usr/bin/micon && micon update
 ```
