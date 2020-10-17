@@ -51,7 +51,7 @@ list() {
         find "$local_repo/$1/" -name '*' -maxdepth 1 | sort -f \
             | sed -e 's@^.*/\([^/]*\)$@\1@' | eval cat
     else
-        find "$local_repo/" -maxdepth 1 | sort -f \
+        find "$local_repo/" ! -name '.git' -maxdepth 1 | sort -f \
             | sed -e 's@^.*/\([^/]*\)$@\1@' | eval column
     fi
 }
