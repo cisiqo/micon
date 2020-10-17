@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+remote_repo=https://github.com/cisiqo/cnmirrors.git
+local_repo=${CNMIRRORS:-"$HOME/.micon-cnmirrors"}
+current_repo_rev=$(cd $local_repo 2>/dev/null && git rev-parse HEAD)
+remote_web_root=https://raw.github.com/cisiqo/cnmirrors/$current_repo_rev
+
+version() {
+    echo "$(basename $0) 0.0.1 by cisiqo <csq1124@gmail.com>"
+    echo "https://github.com/cisiqo/micon"
+}
+
+usage() {
+    version
+cat << EOF >&2
+Fetches mirrors from https://github.com/cisiqo/cnmirrors
+Usage:
+    $(basename $0) [command]
+Example:
+    $(basename $0)
+Commands:
+    dump MIRROR-NAME...   Write mirror(s) to STDOUT
+    help                  Display this help text
+    list                  List available mirrors
+    root                  Show the directory where micon stores its mirrows
+    search STR            Search for mirrow with STR in the name
+    update                Update list of available mirrors
+    version               Display current script version
+EOF
+}
+
+clone() {
+    if [ $1 -a $1 = '--silently' ]; then
+        git clone -q "$remote_repo" "$local_repo"
+    else
+        echo "Cloning $remote_repo to $local_repo"
+        git clone "$remote_repo" "$local_repo"
+    fi
+}
+
+init() {
+    if [ ! -e "$local_repo/.git" ]; then
+        clone $1
+    fi
+}
+
+list() {
+    init
+
+    if [[ -n "$1" && -d "$local_repo/$1" ]]; then
+        find "$local_repo/$1/" -name '*' -maxdepth 1 | sort -f \
+            | sed -e 's@^.*/\([^/]*\)$@\1@' | eval cat
+    else
+        find "$local_repo/" -maxdepth 1 | sort -f \
+            | sed -e 's@^.*/\([^/]*\)$@\1@' | eval column
+    fi
+}
+
+root() {
+    echo $local_repo
+}
+
+search() {
+    init --silently
+    for filename in $(find "$local_repo" -iname "*$**" -exec basename \{\}  \; | sort); do
+        echo $filename
+    done
+}
+
+update() {
+    if [ ! -e "$local_repo/.git" ]; then
+        clone
+    else
+        cd "$local_repo"
+        git pull --ff origin master
+    fi
+}
+
+dump() {
+    init --silently
+
+    if [ -n "$2" ]; then
+        mirror_file=$(find "$local_repo/$1" -iname "$2" | head -n 1)
+        mirror_file_relative=${mirror_file#"$local_repo/$1"}
+    else
+        mirror_file=$(find "$local_repo" -iname "$1" | head -n 1)
+        mirror_file_relative=${mirror_file#"$local_repo/"}
+    fi
+
+    if [ -n "$mirror_file" ]; then
+        if [ -d "$mirror_file" ]; then
+            echo "Choose version:"
+            list $1
+        else
+            echo "### $remote_web_root/$mirror_file_relative"
+            echo
+            cat "$mirror_file"
+            echo
+            echo
+        fi
+    else
+        echo "Unknown argument: $1" >&2
+        exit 1
+    fi
+}
+
+if [ $# -eq 0 ]; then
+    usage
+    exit 1
+fi
+
+should_dump=0
+while [ $# -gt 0 ]; do
+    case $1 in
+        version )
+            version
+            exit 0
+            ;;
+        list )
+            if [ -n $2 ]; then
+                list $2
+            else
+                list
+            fi
+            exit 0
+            ;;
+        root )
+            root
+            exit 0
+            ;;
+        update )
+            update
+            exit 0
+            ;;
+        help )
+            usage
+            exit 0
+            ;;
+        dump )
+            if [ $# -gt 1 ]; then
+                should_dump=1
+            else
+                usage
+                exit 1
+            fi
+            ;;
+        search )
+            if [ $# -gt 1 ]; then
+                shift
+                search $*
+                exit 0
+            else
+                usage
+                exit 1
+            fi
+            ;;
+        * )
+            if [ $should_dump -eq 1 ]; then
+                dump $*
+                exit 0
+            else
+                usage
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
