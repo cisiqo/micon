@@ -90,10 +90,6 @@ dump() {
             exit 1
         fi
         mirror_file=$(find "$local_repo/$1" -iname "$2" | head -n 1)
-        if [ ! -n "$mirror_file" ]; then
-            echo "Unknown version $2 for $1" >&2
-            exit 1
-        fi
     else
         mirror_file=$(find "$local_repo" -iname "$1" | head -n 1)
     fi
@@ -111,7 +107,11 @@ dump() {
             echo
         fi
     else
-        echo "Unknown argument: $1" >&2
+        if [ -n "$2" ]; then
+            echo "Unknown version $2 for $1" >&2
+        else
+            echo "Unknown mirror: $1" >&2
+        fi
         exit 1
     fi
 }
