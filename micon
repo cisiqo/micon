@@ -47,9 +47,14 @@ init() {
 list() {
     init
 
-    if [[ -n "$1" && -d "$local_repo/$1" ]]; then
-        find "$local_repo/$1/" -name '*' -maxdepth 1 | sort -f \
-            | sed -e 's@^.*/\([^/]*\)$@\1@' | eval cat
+    if [ -n "$1" ]; then
+        if [ ! -d "$local_repo/$1" ]; then
+            echo "Unknown mirror: $1 or has not been added to the mirror library" >&2
+            exit 1
+        else
+            find "$local_repo/$1/" -maxdepth 1 | sort -f \
+                | sed -e 's@^.*/\([^/]*\)$@\1@' | eval cat
+        fi
     else
         find "$local_repo/" ! -name '.git' -maxdepth 1 | sort -f \
             | sed -e 's@^.*/\([^/]*\)$@\1@' | eval column
@@ -80,7 +85,15 @@ dump() {
     init --silently
 
     if [ -n "$2" ]; then
+        if [ ! -d "$local_repo/$1" ]; then
+            echo "Unknown mirror: $1 or has not been added to the mirror library" >&2
+            exit 1
+        fi
         mirror_file=$(find "$local_repo/$1" -iname "$2" | head -n 1)
+        if [ ! -n "$mirror_file" ]; then
+            echo "Unknown version $2 for $1" >&2
+            exit 1
+        fi
     else
         mirror_file=$(find "$local_repo" -iname "$1" | head -n 1)
     fi
@@ -108,7 +121,6 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-should_dump=0
 while [ $# -gt 0 ]; do
     case $1 in
         version )
@@ -137,7 +149,9 @@ while [ $# -gt 0 ]; do
             ;;
         dump )
             if [ $# -gt 1 ]; then
-                should_dump=1
+                shift
+                dump $*
+                exit 0
             else
                 usage
                 exit 1
@@ -154,14 +168,8 @@ while [ $# -gt 0 ]; do
             fi
             ;;
         * )
-            if [ $should_dump -eq 1 ]; then
-                dump $*
-                exit 0
-            else
-                usage
-                exit 1
-            fi
+            usage
+            exit 1
             ;;
     esac
-    shift
 done
